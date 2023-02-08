@@ -1,12 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
-import { useContext } from "react";
-import { AuthContext } from "./components/context/authContext";
+import { verifyAuth } from "./lib/auth";
 
 export async function middleware(req: NextRequest) {
-  const token = req.headers.get("token"); // get token from request header
-  const { currentUser } = useContext(AuthContext); // TODO: check if user is authenticated
+  //const token = req.headers.get("token"); // get token from request header
 
-  if (!currentUser) {
+  const token: any = req.cookies.get("user")?.value;
+  console.log("currentUser login ===>", token);
+
+  const verifedToken =
+    token &&
+    (await verifyAuth(token).catch((err) => {
+      console.log(err);
+    }));
+
+  if (req.nextUrl.pathname.startsWith("/login") && !verifedToken) {
+    return;
+  }
+
+  if (req.url.includes("/login") && verifedToken) {
+    const signinUrl = new URL("/", req.url);
+    return NextResponse.redirect(signinUrl);
+  }
+
+  if (!verifedToken) {
     const signinUrl = new URL("/login", req.url);
     return NextResponse.redirect(signinUrl);
   }
